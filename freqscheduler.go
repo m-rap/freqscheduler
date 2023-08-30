@@ -12,6 +12,7 @@ var counterToSleep int = CounterToSleepMax
 
 func countToSleep() {
 	counterToSleep--
+	//return
 	if counterToSleep <= 0 {
 		time.Sleep(SleepMs * time.Millisecond)
 		counterToSleep = CounterToSleepMax
@@ -19,10 +20,12 @@ func countToSleep() {
 }
 
 type Scheduler struct {
-	StartMs     int64
-	PrevFrameMs int64
-	Interval    int64
-	NextFrameMs int64
+	StartMs         int64
+	PrevFrameMs     int64
+	Interval        int64
+	NextFrameMs     int64
+	PrevIterMs      int64
+	RemainToFrameMs int64
 }
 
 type ISchedule interface {
@@ -41,6 +44,23 @@ func (s *Scheduler) Schedule() {
 	}
 }
 
+func (s *Scheduler) Schedule2() {
+	nowMs := time.Now().UnixMilli()
+	var iterEllapsedMs int64
+	if s.PrevIterMs == 0 {
+		iterEllapsedMs = 0
+	} else {
+		iterEllapsedMs = nowMs - s.PrevIterMs
+	}
+	s.PrevIterMs = nowMs
+	s.RemainToFrameMs -= iterEllapsedMs
+	if s.RemainToFrameMs <= 0 {
+		overtimeMs := s.RemainToFrameMs * -1
+		s.RemainToFrameMs = s.Interval - overtimeMs
+		fmt.Printf("at %v (overtime %v)\n", nowMs, overtimeMs)
+	}
+}
+
 func main() {
 	fmt.Println("freqscheduler")
 	s := Scheduler{
@@ -50,7 +70,8 @@ func main() {
 		NextFrameMs: int64(0),
 	}
 	for {
-		s.Schedule()
+		//s.Schedule()
+		s.Schedule2()
 		countToSleep()
 	}
 }
