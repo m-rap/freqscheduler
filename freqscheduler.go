@@ -5,14 +5,13 @@ import (
 	"time"
 )
 
-const CounterToSleepMax = 50
+const CounterToSleepMax = 5000
 const SleepMs = 1
 
 var counterToSleep int = CounterToSleepMax
 
 func countToSleep() {
 	counterToSleep--
-	//return
 	if counterToSleep <= 0 {
 		time.Sleep(SleepMs * time.Millisecond)
 		counterToSleep = CounterToSleepMax
@@ -56,8 +55,9 @@ func (s *Scheduler) Schedule2() {
 	s.RemainToFrameMs -= iterEllapsedMs
 	if s.RemainToFrameMs <= 0 {
 		overtimeMs := s.RemainToFrameMs * -1
-		s.RemainToFrameMs = s.Interval - overtimeMs
 		fmt.Printf("at %v (overtime %v)\n", nowMs, overtimeMs)
+		overtimeMs %= s.Interval
+		s.RemainToFrameMs = s.Interval - overtimeMs
 	}
 }
 
@@ -66,7 +66,7 @@ func main() {
 	s := Scheduler{
 		StartMs:     time.Now().UnixMilli(),
 		PrevFrameMs: int64(0),
-		Interval:    int64(500),
+		Interval:    int64(10),
 		NextFrameMs: int64(0),
 	}
 	for {
