@@ -61,17 +61,30 @@ func (s *Scheduler) Schedule2() {
 	}
 }
 
+func (s *Scheduler) Schedule3() {
+	nowMs := time.Now().UnixMilli()
+	if s.NextFrameMs == 0 {
+		s.NextFrameMs = nowMs
+	}
+	if nowMs >= s.NextFrameMs {
+		overtimeMs := nowMs - s.NextFrameMs
+		fmt.Printf("at %v (overtime %v)\n", nowMs, overtimeMs)
+		overtimeMs %= s.Interval
+		s.NextFrameMs = nowMs + s.Interval - overtimeMs
+	}
+}
+
 func main() {
 	fmt.Println("freqscheduler")
 	s := Scheduler{
 		StartMs:     time.Now().UnixMilli(),
 		PrevFrameMs: int64(0),
-		Interval:    int64(10),
+		Interval:    int64(500),
 		NextFrameMs: int64(0),
 	}
 	for {
 		//s.Schedule()
-		s.Schedule2()
+		s.Schedule3()
 		countToSleep()
 	}
 }
