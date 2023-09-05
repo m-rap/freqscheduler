@@ -19,12 +19,23 @@ func countToSleep() {
 }
 
 type Task struct {
-	StartMs         int64
-	PrevFrameMs     int64
-	Interval        int64
-	NextFrameMs     int64
-	PrevIterMs      int64
-	RemainToFrameMs int64
+	StartMs          int64
+	PrevFrameMs      int64
+	Interval         int64
+	NextFrameMs      int64
+	PrevIterMs       int64
+	RemainToFrameMs  int64
+	ReadyToRun       bool
+	TaskFunc         func(userData interface{})
+	TaskFuncUserData interface{}
+}
+
+func (s *Task) ExecuteFunc() {
+	if s.TaskFunc == nil {
+		fmt.Println("task func not defined!")
+		return
+	}
+	s.TaskFunc(s.TaskFuncUserData)
 }
 
 func (s *Task) UpdateTiming() {
@@ -57,7 +68,7 @@ func (s *Task) UpdateTiming2() {
 	}
 }
 
-func (s *Task) UpdateTiming3() int64 {
+func (s *Task) UpdateTiming3() {
 	nowMs := time.Now().UnixMilli()
 	if s.NextFrameMs == 0 {
 		s.NextFrameMs = nowMs
@@ -67,8 +78,10 @@ func (s *Task) UpdateTiming3() int64 {
 		fmt.Printf("at %v (overtime %v)\n", nowMs, overtimeMs)
 		overtimeMs %= s.Interval
 		s.NextFrameMs = nowMs + s.Interval - overtimeMs
+		s.ReadyToRun = true
+	} else {
+		s.ReadyToRun = false
 	}
-	return s.NextFrameMs
 }
 
 type Worker struct {
@@ -87,9 +100,13 @@ func (s *Scheduler) Loop() {
 	for {
 		minNextMs := MaxInt64
 		for i := range s.Tasks {
-			nextMs := s.Tasks[i].UpdateTiming3()
+			s.Tasks[i].UpdateTiming3()
+			nextMs := s.Tasks[i].NextFrameMs
 			if nextMs < minNextMs {
 				minNextMs = nextMs
+			}
+			if s.Tasks[i].ReadyToRun {
+				s.Tasks[i].ExecuteFunc()
 			}
 		}
 		nowMs := time.Now().UnixMilli()
@@ -101,14 +118,26 @@ func (s *Scheduler) Loop() {
 	}
 }
 
+func myTaskFunction(userData interface{}) {
+	id, ok := (userData).(*int)
+	if !ok {
+		return
+	}
+	fmt.Printf("executing task on id %v\n", *id)
+	*id++
+}
+
 func main() {
 	fmt.Println("freqscheduler")
 	s := Scheduler{}
+	id := int(0)
 	s.Tasks = append(s.Tasks, Task{
-		StartMs:     time.Now().UnixMilli(),
-		PrevFrameMs: int64(0),
-		Interval:    int64(500),
-		NextFrameMs: int64(0),
+		StartMs:          time.Now().UnixMilli(),
+		PrevFrameMs:      int64(0),
+		Interval:         int64(500),
+		NextFrameMs:      int64(0),
+		TaskFunc:         myTaskFunction,
+		TaskFuncUserData: &id,
 	})
 	s.Tasks = append(s.Tasks, Task{
 		StartMs:     time.Now().UnixMilli(),
